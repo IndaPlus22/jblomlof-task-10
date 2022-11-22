@@ -1,5 +1,9 @@
 % This is very slow. My a* algorithm checks stupid paths and can overlap very easily.
 % However i cant be bothered to fix it so i wont.
+% On the the other hand its mostly just slow when a group is dead, otherwise quite fast for large boards.
+% To fix it I think I need some memory to see paths i have already taken. Because the problem rn is that it checks
+% so many tree paths which are basically the same.
+
 
 
 
@@ -16,6 +20,7 @@ load_board(BoardFileName, Board):-
     read(Board),            % Reads the first Prolog-term from the file
     seen.                   % Closes the io-stream
 
+% Able to run check_alive easier given we use a .txt file for board.
 run_pr(Row,Column, FileName):- % with fle name
 load_board(FileName, Board),
 check_alive(Row, Column, Board).
@@ -24,10 +29,12 @@ check_alive(Row, Column, Board).
 % the stone located at (Row, Column) is alive or dead.
 check_alive(Row, Column, Board):-
     nth1_2d(Row, Column, Board, Stone),
-    (Stone = w), % input validition i guess
-    exit_exists(Row, Column, Board).
+    \+(Stone = e), % input validition i guess
+    
+    exit_exists(Row, Column, Board, Stone).
 
-exit_exists(Row, Column, Board):-
+% Searches all possible branching that can happen and if they are pathes to e or not.
+exit_exists(Row, Column, Board, Colour):-
     Row > 0,
     Column > 0,
     len_of_list(Board, MaxRow),
@@ -39,32 +46,32 @@ exit_exists(Row, Column, Board):-
     Column < MaxColumn1,
     nth1_2d(Row,Column, Board, Stone), % Thanks to this thread i know how to branch https://stackoverflow.com/questions/1775651/whats-the-operator-in-prolog-and-how-can-i-use-it
     (
-    Stone = w -> 
-    set_element_to_b(Row, Column, Board, NewBoard),
+    Stone = Colour -> 
+    set_element_to_x(Row, Column, Board, NewBoard),
     Row1 is Row + 1,
     Row2 is Row -1,
     Column1 is Column + 1,
     Column2 is Column - 1,
         (
-        exit_exists(Row1, Column, NewBoard);
-        exit_exists(Row2, Column, NewBoard);
-        exit_exists(Row, Column1, NewBoard);
-        exit_exists(Row, Column2, NewBoard)
-        );
-    Stone = e -> !
+        exit_exists(Row1, Column, NewBoard, Colour);
+        exit_exists(Row2, Column, NewBoard, Colour);
+        exit_exists(Row, Column1, NewBoard, Colour);
+        exit_exists(Row, Column2, NewBoard, Colour)
+        )
+    ;Stone = e -> !
     ).
 
-set_element_to_b(1, Column, [ToReplace|CurrentBoard], [SubBoard|CurrentBoard]):-
-    set_element_in_list_to_b(Column, ToReplace, SubBoard).
+set_element_to_x(1, Column, [ToReplace|CurrentBoard], [SubBoard|CurrentBoard]):-
+    set_element_in_list_to_x(Column, ToReplace, SubBoard).
 
-set_element_to_b(Row, Column, [A|CurrentBoard], [A|NewBoard]):-
+set_element_to_x(Row, Column, [A|CurrentBoard], [A|NewBoard]):-
     Row1 is Row-1,
-    set_element_to_b(Row1, Column, CurrentBoard, NewBoard).
+    set_element_to_x(Row1, Column, CurrentBoard, NewBoard).
 
-set_element_in_list_to_b(1, [_|L], [b|L]).
-set_element_in_list_to_b(IndexPos, [A|TheList], [A|NewList]):-
+set_element_in_list_to_x(1, [_|L], [x|L]).
+set_element_in_list_to_x(IndexPos, [A|TheList], [A|NewList]):-
     IndexPos1 is IndexPos-1,
-    set_element_in_list_to_b(IndexPos1, TheList, NewList).
+    set_element_in_list_to_x(IndexPos1, TheList, NewList).
 
 len_of_column_helper([A|_], A).
 len_of_list([],0). % "inspired by" https://www.geeksforgeeks.org/lists-in-prolog/#:~:text=Operations%20on%20Prolog%20Lists%3A%201%201.%20Find%20the,an%20element%20X%20from%20a%20list%20L%20
