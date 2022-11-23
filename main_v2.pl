@@ -1,10 +1,16 @@
-% This is very slow. My a* algorithm checks stupid paths and can overlap very easily.
-% However i cant be bothered to fix it so i wont.
-% On the the other hand its mostly just slow when a group is dead, otherwise quite fast for large boards.
-% To fix it I think I need some memory to see paths i have already taken. Because the problem rn is that it checks
-% so many tree paths which are basically the same.
+%It was a very slow boi. But I did some changes. My thought process was as follow
+
+% A way to make this faster is to terminate every search that steps on a tile we already searched for
+% E.g if we taken path [[2,2], [2,3].....] (path-1)
+% and we are now searching the path [[3,3], [2,3]] we can realize that our path that we are on is now doomed to fail
+% if path-1 also failed. We can only search paths that path-1 already searched or search squares path-1 already tried to search.
+% So lets save every path we done and compare if our newest square is in any of the paths.
+% Bonus: I dont even need to keep track where in what direction i cant go anymore.
+% I cant make it work (well it works but not optimized). It cant return the paths it took, well, because its just false.
 
 
+% Now a Very fast boi
+% Using memory to remember squares it doesnt like
 
 
 % Taken and modified from https://gist.github.com/MuffinTheMan/7806903
@@ -21,7 +27,7 @@ load_board(BoardFileName, Board):-
     seen.                   % Closes the io-stream
 
 % Able to run check_alive easier given we use a .txt file for board.
-run_pr(Row,Column, FileName):- % with fle name
+run_pr(Row,Column, FileName):- % with file name
 load_board(FileName, Board),
 check_alive(Row, Column, Board).
 
@@ -40,6 +46,8 @@ check_alive(Row, Column, Board):-
     contains(0, Moves).
 
 % Searches all possible branching that can happen and if they are pathes to e or not.
+% Returns a List ReturnVisited that contains pairs of numbers. If there is a path to and empty cell
+% There is a 0 in the ReturnVisited list. Thus we check for it at the end of check_alive().
 exit_exists(Row, Column, MaxRow, MaxColumn, Board, Colour, Visited, ReturnVisited):-
       (
         \+ already_searched([Row, Column], Visited),
@@ -68,26 +76,21 @@ exit_exists(Row, Column, MaxRow, MaxColumn, Board, Colour, Visited, ReturnVisite
     )
     ;list_concat([], Visited, ReturnVisited). % something failed
 
-
+% Gives length of either a row, or column. Need helper func for column.
 len_of_column_helper([A|_], A).
 len_of_list([],0). % "inspired by"(read copied) https://www.geeksforgeeks.org/lists-in-prolog/#:~:text=Operations%20on%20Prolog%20Lists%3A%201%201.%20Find%20the,an%20element%20X%20from%20a%20list%20L%20
 len_of_list([_|L], N):-
     len_of_list(L, N1),
     N is N1 + 1.
 
+% Adds L1 to end of L2
 list_concat([],L,L). % taken from same as len_of_list
 list_concat([X1|L1],L2,[X1|L3]) :- list_concat(L1,L2,L3).
 
+%True if Element A is in List
 contains(A, [A|_]).
 contains(A, [_|List]):-
     contains(A, List).
-% A way to make this faster is to terminate every search that steps on a tile we already searched for
-% E.g if we taken path [[2,2], [2,3].....] (path-1)
-% and we are now searching the path [[3,3], [2,3]] we can realize that our path that we are on is now doomed to fail
-% if path-1 also failed. We can only search paths that path-1 already searched or search squares path-1 already tried to search.
-% So lets save every path we done and compare if our newest square is in any of the paths.
-% Bonus: I dont even need to keep track where in what direction i cant go anymore.
-% I cant make it work (well it works but not optimized). It cant return the paths it took, well, because its just false.
 
 % Pairs contains coord [x,y]. If X, Y is already a pair this is true.
 % It doesnt work with out brackets for first arg??
@@ -97,4 +100,5 @@ already_searched([X|Y], [[X|Y]|_]).
 already_searched([X|Y], [_|Pairs]):-
     already_searched([X|Y], Pairs).
 
+%Like list_concat. But I did this before i Know that was a thing
 add_to_visited(Pair, Visited, [Pair|Visited]).
